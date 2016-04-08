@@ -1,0 +1,680 @@
+---
+title: "Explore SF Salary Data"
+author: "Michael Griffiths"
+output:
+  html_document:
+    highlight: pygments
+    toc: yes
+  pdf_document:
+    toc: yes
+---
+
+Kaggle Datasets provides data on[San Francisco city employee data](https://www.kaggle.com/kaggle/sf-salaries). 
+
+For fun, let's do some EDA.
+
+```{r warning=F, comment=F, message=F}
+library(dplyr)
+library(RSQLite)
+library(tidyr)
+library(ggplot2)
+library(readr)
+library(stringr)
+library(scales)
+library(mixtools)
+```
+
+# Data
+
+The files are in the `../input` subdirectory.
+
+```{r ListData}
+list.files("output/")
+```
+
+The two files are the SQLite database (`database.sqlite`), and the CSV file (`Salaries.csv`). In theory, these have exactly the same data.
+
+Well, let's check.
+
+```{r}
+# The CSV
+data_csv <- read_csv("output/Salaries.csv", na=c("Not Provided"))
+(glimpse(data_csv))
+
+# The database
+db <- src_sqlite("output/database.sqlite")
+
+# Get table list
+# Preview tables
+(glimpse(db %>% tbl("Salaries")))
+```
+
+A quick visual estimation suggest that they're very similar. A keen eye might see that in the CSV, field `OvertimePay` is inferred as `dbl`, but in the SQL database it's coerced to `int`. 
+
+Of course - does that mean there are differences? If all the `OvertimePay` has zero cents, they should be.
+
+```{r}
+head(data_csv) == db %>% tbl("Salaries") %>% head
+```
+
+Well: nope, they're not the same. The good news is that's the only column that has any differences in the first 6 rows. We could dig a little deeper to identify more, but - we don't need to.
+
+Since the CSV file has more accurate information, it's preferred. Let's juse use that.
+
+```{r}
+data <- data_csv
+```
+
+# Exploratory Data Analysis
+
+The first thing I'd like to know is what the variables look like. 
+
+## Non-Numeric Variables
+
+For the non-numeric vars (like `Notes`) I'd like to know:
+
+* How many unique vablues are there?
+* What's the relative frequency?
+
+```{r}
+non_numeric_vars <- names(data)[!sapply(data, is.numeric)]
+data %>% 
+    select(one_of(non_numeric_vars)) %>%
+    summarise_each(funs(unique_vars = length(unique(.))))
+```
+
+It looks like `EmployeeName` has the most unique values - in fact, relatively few people share names (~25%).
+
+However, why are there so many values for `Benefits`? What's in that column?
+
+```{r}
+# No values in the first few rows - 
+(head(data$Benefits))
+
+# So how about unique values?
+(head(unique(data$Benefits)))
+```
+
+Those are all numbers!
+
+That makes some sense - by default `dplyr` scans the first 50 rows to infer type. If there were no numbers in the first 50 rows `dplyr` would cast to string.
+
+When does the first non-empty value of benefits occur?
+
+```{r}
+which.min(data$Benefits == "")
+```
+
+That's quite a lot of empty rows!
+
+Well, we can coerce to number.
+
+```{r}
+data <- data %>%
+    mutate(Benefits = as.numeric(Benefits))
+
+# Update the list of non-numeric vars
+non_numeric_vars <- names(data)[!sapply(data, is.numeric)]
+```
+
+OK - so now that we have the refreshed list, let's look at the combinations of unique values in `Notes`, `Agency`, and `Status`.
+
+```{r}
+data %>%
+    group_by(Notes, Agency, Status) %>%
+    summarise(Frequency = n())
+```
+
+So - `Notes` contains no information; `Agency` is all the same; and `Status` is blank for most users. That looks unreliable... surely the only two options are *Part Time* (`PT`) or *Full Time* (`FT`)? 
+
+For the moment let's remove `Notes` and `Agency` since they don't add any value. We'll figure out `Status` later.
+
+```{r}
+data <- data %>% 
+    select(-Notes, -Agency)
+```
+
+### Job Title
+
+I want to pay special attention to `JobTitle`. What information do we have?
+
+Let's look at the most frequent.
+
+```{r}
+data %>%
+    group_by(JobTitle) %>%
+    summarise(Frequency = n()) %>%
+    arrange(desc(Frequency)) %>%
+    head
+```
+
+It looks like we could perhaps classify some of these, but that requires domain expertise (*Police Officer 3* is obviously Police, but do all Police job have Police in the title?)
+
+How many job titles only occur once?
+
+```{r}
+data %>%
+    group_by(JobTitle) %>%
+    summarise(Frequency = n()) %>%
+    mutate(OccursOnce = Frequency == 1) %>%
+    group_by(OccursOnce) %>%
+    summarise(Total = n())
+```
+
+OK, so most jobs occur more than once few times. What are some of the ones that occur only once?
+
+```{r}
+data %>% 
+    filter(!duplicated(JobTitle)) %>%
+    head()
+```
+
+They look pretty senior. How does the pay compare to the people who share a title?
+
+```{r}
+data %>%
+    mutate(SharesTitle = duplicated(JobTitle)) %>%
+    ggplot(aes(x = TotalPay)) + 
+    geom_density(aes(fill = SharesTitle), alpha = 0.6)
+```
+
+Well, that's interesting.
+
+First of all: it looks like people who don't share a title have somewhat higher pay - certainly in the right tail.
+
+But why do so many people who *share* a title have such a high frequency of `TotalPay` at 0?
+
+We obviously need to learn more about the numeric columns before embarking on this kind of analysis!
+
+## Numeric Variables
+
+Let's look at a summary of the numeric vars.
+
+```{r}
+data %>%
+    select(-one_of(non_numeric_vars)) %>%
+    summary
+```
+
+A few interesting things - 
+
+* Some people have **negative** pay, . What on earth does that mean?
+* `Year` looks like a factor indicating year.
+* Does `Id` identify the row, or the employee?
+    
+Let's take that in random order.
+
+Does `Id` identify the employee?
+
+```{r}
+table(duplicated(data$Id))
+```
+
+Nope, it identifies the row. That's frustrating - what if someone got a promotion in 2013? How can we track the change in their salary?
+
+Who has negative pay?
+
+```{r}
+data %>%
+    filter(TotalPay < 0) 
+```
+
+OK, just one person. Perhaps he mis-stated an invoice in the previous year.
+
+Who has pay of 0?
+
+```{r}
+data %>% 
+    filter(TotalPay == 0) 
+```
+
+OK, so we have 368 people. 
+
+But - some of them are getting benefits. Perhaps they're retired, on disability, or something else?
+
+Alright - so now, how many people have pay between $0.00 and $100.00?
+
+```{r}
+data %>%
+    filter(TotalPay > 0, TotalPay < 100) 
+```
+
+We have 398 people. This probably includes people who were paid for, say, an hour of their time.
+
+Now: does the `Status` column have anything to do with this? Perhaps Full Time employees have more complete information.
+
+## Job Status & Total Pay
+
+Let's take a quick look.
+
+```{r}
+data %>%
+    ggplot(aes(x = TotalPay)) +
+    geom_density(aes(fill = Status), alpha = 0.6)
+```
+
+Well, that makes a lot of sense. Part Time (`PT`) employees are compensated according to how much the city uses them - which is very little.
+
+The story with blank `Status` is a little more complicated. Frankly, it looks like a lot of the blank entries should be full time; and some should be part time. We can see the graph split.
+
+For now, let's proceed by filtering down to `FT` employees. Later, we might want to do something with the missing values in the `Status` column (for instance, predict the right value).
+
+# Analyzing Full Time Employees
+
+First let's create a dataset just for full time employees.
+
+```{r}
+ft <- data %>% filter(Status == "FT")
+dim(ft)
+```
+
+OK. We have ~22,000 rows. 
+
+How does that break down by each year?
+
+```{r}
+ft %>%
+    group_by(Year) %>%
+    summarise(Frequency = n())
+```
+
+They are **all** from 2014. Good to know. 
+
+That introduces the question about the blank `Status` rows. Perhaps values are only filled out for 2014? Let's take a quick look before progressing.
+
+```{r}
+data %>%
+    group_by(Year, Status) %>%
+    summarise(Frequency = n()) %>%
+    spread(Year, Frequency) 
+```
+
+Well, that answers that question: **only** 2014 has people categorized, and even 2014 has 4 missing values (!). Who are they?
+
+```{r}
+data %>%
+    filter(Status == "", Year == 2014) 
+```
+
+That's... interesting. No names, and no pay? 
+
+Anyway: back to 2014 Full Time employees.
+
+## Compensation
+
+To start with, let's look at compensation.
+
+```{r}
+ft %>%
+    ggplot(aes(x = BasePay)) +
+    geom_density(fill = "grey40") 
+```
+
+It looks like we have a few spikes there - perhaps diferent types of jobs, or different levels?
+
+What about overtime?
+
+```{r}
+ft %>%
+    ggplot(aes(x = OvertimePay)) +
+    geom_density(fill = "grey40") 
+```
+
+That's a .... pretty weird graph. Someone made over $150,000 in *overtime*? Really?
+
+OK, so how about benefits.
+
+```{r}
+ft %>%
+    ggplot(aes(x = Benefits)) +
+    geom_density(fill = "grey40") 
+```
+
+That looks a little better; again there are spikes. Interesting that the lowest benefit number is ~$25,000 annually, or $2,000/month. 
+
+## Job Titles
+
+OK: there are ~22,000 people doing full time work. How many unique job titles?
+
+```{r}
+# How many
+(length(unique(ft$JobTitle)))
+
+# Quick previous
+head(unique(ft$JobTitle))
+```
+
+I'd really like to categorize these somehow. 
+
+### Job Levels
+
+Taking a quick look, it seems like some jobs end in a level (e.g. "2" or "I"). Let's take a look.
+
+```{r}
+# Add to dataset
+ft %>%
+    mutate(level = str_extract(JobTitle, "(?<=\\s).$")) ->
+    ft
+
+# Subset down
+ft %>%
+    filter(!is.na(level)) ->
+    jobs_with_levels
+
+# Peek
+(head(jobs_with_levels))
+
+jobs_with_levels %>%
+    group_by(level) %>%
+    summarise(People = n(), Titles = n_distinct(JobTitle))
+    
+```
+
+So, it looks like we have ~150 of the job titles and ~3,500 people that have levels.
+
+Well - how do the levels compare?
+
+```{r}
+ft %>%
+    mutate(Level = ifelse(is.na(level), "No Level", level)) %>% 
+    ggplot(aes(x = TotalPay)) +
+    geom_density(aes(fill = Level), alpha = 0.6) +
+    facet_wrap(~Level, scales="free_y")
+```
+
+Unsurprisingly, it looks like 1 veers lower. Interesting to see 2, 3, 4, and 5 - there look to be at least two underlying distributions in each.
+
+
+### Title Level
+
+What about the information in "Asst" and "Associate", etc?
+
+Let's look at the first word.
+
+```{r}
+ft %>%
+    mutate(first_word = str_extract(JobTitle, "^.+?(?=\\s)")) %>%
+    group_by(first_word) %>%
+    summarise(frequency = n()) %>%
+    arrange(desc(frequency)) 
+```
+
+The `NA` are introduced because the job title is only one word.
+
+Unfortunately, the most frequent ones don't pop out too well. 
+
+### Cheating: Job Type
+
+The SQL script [SF Salaries by JobType](https://www.kaggle.com/mannychapman/d/kaggle/sf-salaries/sf-salaries-by-jobtype) created by [mannychapman](https://www.kaggle.com/mannychapman) has some classification of job type. It'd be a shame to re-create work already done, so let's re-implement here.
+
+Since I'm a lazy man, I'd going to re-use the script almost as-is. We have that nice SQLite database - why not use it to retrieve IDs?
+
+```{r}
+query = "select  Id, 
+            case when jobtitle like '%fire%' then 'Fire'
+            when jobtitle like '%police%' then 'Police'
+            when jobtitle like '%sherif%' then 'Police'
+            when jobtitle like '%probation%' then 'Police'
+            when jobtitle like '%Sergeant%' then 'Police'
+            
+            
+            when jobtitle like '%MTA%' then 'Transit'
+            when jobtitle like '%transit%' then 'Transit'
+            when jobtitle like '%anesth%' then 'Medical'
+            when jobtitle like '%medical%' then 'Medical'
+            when jobtitle like '%nurs%' then 'Medical'
+            when jobtitle like '%health%' then 'Medical'
+            when jobtitle like '%physician%' then 'Medical'
+            when jobtitle like '%Orthopedic%' then 'Medical'
+            
+            when jobtitle like '%health%' then 'Medical'
+            when jobtitle like '%pharm%' then 'Medical'
+            when jobtitle like '%airport%' then 'Airport'
+            when jobtitle like '%animal%' then 'Animal'
+            when jobtitle like '%architect%' then 'Architectural'
+            when jobtitle like '%court%' then 'Court'
+            when jobtitle like '%legal%' then 'Court'
+            
+            when jobtitle like '%MAYOR%' then 'Mayor'
+            when jobtitle like '%librar%' then 'Library'
+            
+            when jobtitle like '%parking%' then 'Parking'
+            
+            when jobtitle like '%Public Works%' then 'Public Works'
+            when jobtitle like '%Attorney%' then 'Attorney'
+            when jobtitle like '%MECHANIC%' then 'Automotive'
+            when jobtitle like '%automotive%' then 'Automotive'
+            when jobtitle like '%custodian%' then 'Custodian'
+            when jobtitle like '%engineer%' then 'Engineering'
+            when jobtitle like '%engr%' then 'Engineering'
+            when jobtitle like '%account%' then 'Accounting'
+            when jobtitle like '%Gardener%' then 'Gardening'
+            when jobtitle like '%General Laborer%' then 'General Laborer'
+            when jobtitle like '%food serv%' then 'Food Service'
+            when jobtitle like '%clerk%' then 'Clerk'
+            when jobtitle like '%porter%' then 'Porter'
+            else null 
+        end as JobType
+        from Salaries"
+
+db %>%
+    tbl(sql(query)) %>%
+    collect() ->
+    job_classification
+
+# Now we can join with ft
+ft %>%
+    left_join(job_classification) ->
+    ft
+
+# Let's see how many jobs were *not* matched.
+ft %>% 
+    filter(is.na(JobType)) %>%
+    summarise(Rows = n(), JobTitles = n_distinct(JobTitle)) 
+```
+
+OK: so we missed around 633 of the `r length(unique(ft$JobTitle))` jobs.
+
+Well, let's take a look at the results anyway.
+
+```{r}
+ft %>%
+    ggplot(aes(x = TotalPayBenefits)) +
+    geom_density(alpha = 0.6) +
+    facet_wrap(~JobType, scales = "free_y", ncol = 4)
+```
+
+Well, that's a little interesting. Look at **Engineering** - is that 3 spikes? Also, steep ascent (looks like a minimum lower bound) as well as a pretty steep cliff at the high end. 
+
+Perhaps the City needs to compete with tech companies at the low end (lower bar), and then doesn't compete at the higher end (so people leave?).
+
+And look at **Attorney** - seems like a decent number start low, but most attorneys make the same amount of money.
+
+**Medical** suggests there's more going on, with such a clear indication of two underlying distributions. 
+
+Why don't we take a closer look at **Medical**?
+
+#### JobType Medical
+
+We might as well look at a Mixture Model for this.
+
+First of all, let's take a closer look.
+
+```{r}
+ft %>%
+    filter(JobType == "Medical") %>%
+    ggplot(aes(x = TotalPayBenefits)) +
+    geom_density() +
+    scale_y_continuous(labels = dollar)
+```
+
+It looks like we have one peak around $100,000, and another just below $200,000.
+
+Let's figure out roughly what they could be...
+
+```{r}
+ft %>%
+    filter(JobType == "Medical") %>%
+    mutate(breaks = TotalPayBenefits > 150000) %>%
+    group_by(breaks) %>% 
+    summarise(median = median(TotalPayBenefits),
+              mean = mean(TotalPayBenefits),
+              sd = sd(TotalPayBenefits))
+```
+
+Alright - let's fit a mixture model.
+
+```{r}
+medical <- filter(ft, JobType == "Medical")
+normalmixEM(medical$TotalPayBenefits, lambda = .5, 
+            mu = c(104383, 209014), sigma = c(18060,36480)) %>%
+    plot(density = T)
+```
+
+That doesn't look unreasonable; though, of course, it's hard to identify which jobs would be in each category (or what the categories are) without more work. It could also be very wrong (and likely is: the second bump is probably senior staff, supervisors, management, etc).
+
+### Job Types
+
+I suspect we can do a better job. I'm not going to, since I'm about done with the time I set aside to do this work,  but let's consider:
+
+* Assistants
+* Supervisors
+
+Take Assistants - 
+
+```{r}
+ft %>%
+    mutate(Assistant = str_extract(JobTitle, "Asst|Assistant")) %>%
+    group_by(Assistant) %>%
+    summarise(mean(TotalPayBenefits))
+```
+
+It looks like people who are called **Asst** tend to make more money. It turns out - great surprise! - that when the City shortens the word, it's because it's a long title. Often when **Manager** or **Supervisor** is after it.
+
+```{r}
+ft %>%
+    mutate(Assistant = str_extract(JobTitle, "Asst|Assistant")) %>%
+    filter(Assistant == "Asst") %>%
+    group_by(JobTitle) %>%
+    summarise(Frequency = n(), pay = mean(TotalPayBenefits), sd = sd(TotalPayBenefits)) %>%
+    arrange(desc(Frequency))
+```
+
+But, like anything, not always. Look at the **Asst Engr** ones! They drive the average up.
+
+The compensation looks to be all over the place. Hmm. 
+
+#### Word Compensation
+
+What if we measured average compensation by word?
+
+```{r}
+words <- strsplit(tolower(ft$JobTitle), "\\W")
+names(words) <- ft$Id
+
+# Create tall matrix.
+words_long <- data.frame(Id = names(unlist(words)), 
+                         Word = unlist(words), 
+                         stringsAsFactors = F)
+
+# Strip off index position.
+words_long <- words_long %>% 
+    mutate(Id = gsub("\\d$","", Id),
+           Id = as.integer(Id))
+
+ft_comp <- ft %>% select(Id, JobTitle, TotalPayBenefits)
+
+words_long %>% left_join(ft_comp) ->
+    words_salary
+
+head(words_salary)
+```
+
+OK, so just quickly - for every word that occurs at least twice, return the average.
+
+```{r}
+words_salary %>%
+    group_by(Word) %>%
+    summarise(Pay = mean(TotalPayBenefits, na.rm = T),
+              sd = sd(TotalPayBenefits, na.rm = T),
+              titles = n_distinct(JobTitle),
+              people = n_distinct(Id)) %>%
+    filter(people > 1, !is.na(Pay)) %>%
+    mutate(Pay = dollar(Pay), sd = dollar(sd)) %>%
+    arrange(desc(titles)) %>%
+    head(20)
+```
+
+Alrighty then. Looks like there's some information there.
+
+Now - just for fun - what happens if we make a model? Let's restruct to words that occur at least 20 times. We'll miss some (like Mayor), but might get some interesting results.
+
+```{r}
+words_to_model <- words_salary %>%
+    group_by(Word) %>% 
+    summarise(people = n_distinct(Id)) %>%
+    filter(people >= 20) 
+
+words_model <- subset(words_salary, Word %in% words_to_model$Word)
+
+model <- lm(TotalPayBenefits ~ Word, words_model)
+model_summary = summary(model)
+```
+
+First of all, what's our R squared as a base measure?
+
+```{r}
+model_summary$adj.r.squared
+```
+
+That's better than I expected!
+
+So: what words are signifcant?
+
+```{r}
+coefficients = model_summary$coefficients
+sig_coef = coefficients[coefficients[, 4] < 0.05, ] 
+# Fix the names
+rownames(sig_coef) <- gsub("^Word", "", rownames(sig_coef))
+sig_coef <- as.data.frame(sig_coef, row.names = rownames(sig_coef))
+sig_coef$Word = rownames(sig_coef)
+head(sig_coef)
+```
+
+OK: the intercept is $166 - much higher than the actual average (~$130k)
+
+What coefficients have the biggest negative effect?
+
+```{r}
+sig_coef %>%
+    arrange(Estimate) %>% 
+    head
+```
+
+What about the biggest positive effect?
+
+```{r}
+sig_coef %>%
+    arrange(desc(Estimate)) %>% 
+    head
+```
+
+Battalion? Really?
+
+```{r}
+ft %>%
+    filter(grepl("battalion", tolower(JobTitle)))
+```
+
+Interesting - all inthe Fire Supress group I imagine that's Fire Department.
+
+# Conclusion
+
+Well, that's enough for now.
+
+There are open challenges in:
+
+* Classifying the JobsTitle.
+* Classifying the EmployeeName (didn't even touch that).
+* Classifying the FTE Status of people not in 2014.
+* Looking at Overtime / Other (also didn't touch)
