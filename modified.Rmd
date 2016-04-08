@@ -27,11 +27,12 @@ library(readr)
 library(stringr)
 library(scales)
 library(mixtools)
+library(gender) # add package gender for gender prediction from first names
 ```
 
 # Data
 
-The files are in the `../input` subdirectory.
+The files are in the `../output` subdirectory.
 
 ```{r ListData}
 list.files("output/")
@@ -139,6 +140,15 @@ data <- data %>%
     select(-Notes, -Agency)
 ```
 
+### Inferring Gender
+
+```{r}
+## this is broken, but continue here
+data %>%
+    strsplit(EmployeeName," ")
+```
+
+
 ### Job Title
 
 I want to pay special attention to `JobTitle`. What information do we have?
@@ -173,6 +183,8 @@ data %>%
     filter(!duplicated(JobTitle)) %>%
     head()
 ```
+
+
 
 They look pretty senior. How does the pay compare to the people who share a title?
 
