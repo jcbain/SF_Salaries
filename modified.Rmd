@@ -143,9 +143,8 @@ data <- data %>%
 ### Inferring Gender
 
 ```{r}
-## this is broken, but continue here
-data %>%
-    strsplit(EmployeeName," ")
+## create a firstname column
+data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
 ```
 
 
