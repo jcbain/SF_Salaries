@@ -13,6 +13,11 @@ Kaggle Datasets provides data on[San Francisco city employee data](https://www.k
 
 For fun, let's do some EDA.
 
+First, let's set our working directory
+```{r}
+setwd(dir = '../sf_salaries/')
+```
+
 ```{r warning=F, comment=F, message=F}
 library(dplyr)
 library(RSQLite)
