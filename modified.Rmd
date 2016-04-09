@@ -143,8 +143,17 @@ data <- data %>%
 ### Inferring Gender
 
 ```{r}
-## create a firstname column
+## create a firstname column in the data
 data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
+data$fname<-tolower(data$fname)
+
+# create some default columns to use as parameters for estimating the gender by first name
+data$year_min <- 1932
+data$year_max <- 2012
+
+# output a new dataframe
+data_gen<-gender_df(data,'fname',year_col = c('year_min','year_max'))
+
 ```
 
 
