@@ -140,22 +140,6 @@ data <- data %>%
     select(-Notes, -Agency)
 ```
 
-### Inferring Gender
-
-```{r}
-## create a firstname column in the data
-data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
-data$fname<-tolower(data$fname)
-
-# create some default columns to use as parameters for estimating the gender by first name
-data$year_min <- 1932
-data$year_max <- 2012
-
-# output a new dataframe
-data_gen<-gender_df(data,'fname',year_col = c('year_min','year_max'))
-
-```
-
 
 ### Job Title
 
@@ -703,3 +687,29 @@ There are open challenges in:
 * Classifying the EmployeeName (didn't even touch that).
 * Classifying the FTE Status of people not in 2014.
 * Looking at Overtime / Other (also didn't touch)
+
+### Inferring Gender
+
+```{r}
+## create a firstname column in the data
+data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
+data$fname<-tolower(data$fname)
+
+#
+workerFunc <- function(n){
+  return
+  cbind(n, gender(as.character(n) , method = "ssa", years = c(1900, 1990))$gender)
+}
+
+samp <- data[sample(nrow(data), 1500), ]
+
+results <- lapply(samp$fname, workerFunc)
+
+indx <- sapply(results, length)
+
+nm_gen<-as.data.frame(do.call(rbind,lapply(results, `length<-`, max(indx))))
+names(nm_gen)<-c('name','gender')
+
+samp$gender<-nm_gen$gender
+
+```
