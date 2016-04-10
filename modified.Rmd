@@ -723,13 +723,32 @@ This first section is just some data carpentry in attempt to find the gender of 
 
 ```
 
+
+
 ```{r}
 samp<- read_csv("output/sample.csv")
 
+# how many males are there in this set
+length((samp[samp$gender=='male']))
 
-mean_m<-mean(na.omit(samp$TotalPay[samp$gender=='male']))
-mean_f<-mean(na.omit(samp$TotalPay[samp$gender=='female']))
+# and the number of females
+length((samp[samp$gender=='female']))
+
+# mean TotalPay for males and females
+mean_m<-mean(na.omit(samp$TotalPay[samp$gender=='male'])) 
+mean_f<-mean(na.omit(samp$TotalPay[samp$gender=='female'])) 
+
+# summary of TotalPay for males and females
+summary(na.omit(samp$TotalPay[samp$gender=='male'])) 
+summary(na.omit(samp$TotalPay[samp$gender=='female'])) 
+
+# difference between male and female pay in San Fran
+mean_m-mean_f
 ```
+
+Well, it looks like males make about $21,000 more than females for this sample. Now, it would be nice to see what sectors males and females are taking up for their occupations and if the pay discrepancy still exists within job types. However, 1,500 rows might be too small to draw any meaningful conclusions. Perhaps when I have more time to run the `workerFunc()` across a larger subset of the data.
+
+Baby steps...Let's take a look at what the TotalPay distribution looks like for males and females.
 
 ```{r}
 samp %>%
@@ -741,5 +760,6 @@ samp %>%
     scale_y_continuous()+
     guides(alpha=FALSE)+ ggtitle("Pay for Males and Females")
    
-  
 ```
+
+Ahh...So that gives a good representation of pay distribution between males and females. It appears that females are more frequently paid a lower salary than opposed to males. Okay, we could have gotten this information from the `summary()` ran above, but this puts a graph to the stats. It is also interesting to see that at around the $175,000 mark, male and female frequency appears to level out. A bit of a further analysis might need to be done in order to see what is going on between the lines, but for a fairly quick and dirty analysis, I think the results are rather interesting.
