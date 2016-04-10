@@ -695,21 +695,28 @@ There are open challenges in:
 data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
 data$fname<-tolower(data$fname)
 
-#
+# worker function to create a vector of names with their identified gender
 workerFunc <- function(n){
   return
   cbind(n, gender(as.character(n) , method = "ssa", years = c(1900, 1990))$gender)
 }
 
+# sample 1500 rows
 samp <- data[sample(nrow(data), 1500), ]
 
+# apply the worker function across the firstname column in the sampled data frame
 results <- lapply(samp$fname, workerFunc)
 
+# index the results vector
 indx <- sapply(results, length)
 
+# create a dataframe of the first names and gender
 nm_gen<-as.data.frame(do.call(rbind,lapply(results, `length<-`, max(indx))))
 names(nm_gen)<-c('name','gender')
 
+# append the gender column to the original sample data frame
 samp$gender<-nm_gen$gender
+
+write_csv(samp, "output/sample.csv")
 
 ```
