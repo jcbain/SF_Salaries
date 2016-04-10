@@ -689,34 +689,57 @@ There are open challenges in:
 * Looking at Overtime / Other (also didn't touch)
 
 ### Inferring Gender
+This first section is just some data carpentry in attempt to find the gender of individuals by their first name using the `gender` package.
 
 ```{r}
+
 ## create a firstname column in the data
-data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
-data$fname<-tolower(data$fname)
+# data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
+# data$fname<-tolower(data$fname)
 
 # worker function to create a vector of names with their identified gender
-workerFunc <- function(n){
-  return
-  cbind(n, gender(as.character(n) , method = "ssa", years = c(1900, 1990))$gender)
-}
+# workerFunc <- function(n){
+  # return
+  # cbind(n, gender(as.character(n) , method = "ssa", years = c(1900, 1990))$gender)
+# }
 
 # sample 1500 rows
-samp <- data[sample(nrow(data), 1500), ]
+# samp <- data[sample(nrow(data), 1500), ]
 
 # apply the worker function across the firstname column in the sampled data frame
-results <- lapply(samp$fname, workerFunc)
+# results <- lapply(samp$fname, workerFunc)
 
 # index the results vector
-indx <- sapply(results, length)
+# indx <- sapply(results, length)
 
-# create a dataframe of the first names and gender
-nm_gen<-as.data.frame(do.call(rbind,lapply(results, `length<-`, max(indx))))
-names(nm_gen)<-c('name','gender')
+## create a dataframe of the first names and gender
+# nm_gen<-as.data.frame(do.call(rbind,lapply(results, `length<-`, max(indx))))
+# names(nm_gen)<-c('name','gender')
 
-# append the gender column to the original sample data frame
-samp$gender<-nm_gen$gender
+## append the gender column to the original sample data frame
+# samp$gender<-nm_gen$gender
 
-write_csv(samp, "output/sample.csv")
+# write_csv(samp, "output/sample.csv")
 
+```
+
+```{r}
+samp<- read_csv("output/sample.csv")
+
+
+mean_m<-mean(na.omit(samp$TotalPay[samp$gender=='male']))
+mean_f<-mean(na.omit(samp$TotalPay[samp$gender=='female']))
+```
+
+```{r}
+samp %>%
+  na.omit(samp$gender) %>%
+    ggplot(aes(x = TotalPay)) +
+    geom_vline(xintercept = mean_m, colour= "#00393b")+
+    geom_vline(xintercept = mean_f, colour="#870f06" )+
+    geom_density(aes(colour=gender, fill =gender, alpha=1)) +
+    scale_y_continuous()+
+    guides(alpha=FALSE)+ ggtitle("Pay for Males and Females")
+   
+  
 ```
