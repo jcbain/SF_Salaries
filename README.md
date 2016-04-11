@@ -16,6 +16,10 @@ Ensure that the `sample.csv` is in the `output\` subdirectory, as it contains th
 #### For SF and LA comparisons
 Put `job_compare.ipynb` and `SF_LA_Salaries.csv` under the same path. Make sure the `Seaborn` library has been installed. Open the notebook and execute the code blocks. The detailed instructions of all steps are embedded in markdowns.
 
+#### For SF and LA  total Pay comparisons
+Put `p2vir.R` and `Salaries.csv` and `LA_Salaries.csv` under the same path. Make sure the `hexbin` library has been installed. Open the RStudio and execute the code.
+
+
 ### Modified Analyses
 
 The original analysis was very thorough, so seeking modifications or tweaking of any sort given the original analysis was somewhat difficult. This meant that we had to bring in some variables from the outside in order for us to get anything interesting.
