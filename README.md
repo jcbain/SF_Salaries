@@ -55,10 +55,12 @@ In addition to that we compared the average of total pay in these cities.
 The average salaries for all years was larger for Los Angeles than San Francisco except for the year 2013. the following graphs show that
 
 ![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/SF.png) 
+
 San Francisco 
 
 
 ![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/LA.png)
+
 Los Angeles 
 
 
