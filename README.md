@@ -49,15 +49,17 @@ Then compare the count of each category of jobs in SF and LA by the `countplot` 
 In the Kaggle, there were analysis for the data from SF. However, it is interesting to compare the data of SF with other city. We compared the total pay of SF with the LA for 4 years (2011-2014).
 The graph shows a  comparison between the total pay of San Francisco and Los Angeles grouped by year. In total the salaries were similar to each other. However. there are some salaries in Los Angeles larger than that of San Francisco with some exception in the year 2011.
 
-![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/SF-LA.png)
+                   ![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/SF-LA.png)
 
 In addition to that we compared the average of total pay in these cities. 
 The average salaries for all years was larger for Los Angeles than San Francisco except for the year 2013. the following graphs show that
 
-![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/SF.png)
+                    ![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/SF.png) 
+                                                 San Francisco 
 
 
-![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/LA.png)
+                    ![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/LA.png)
+                                                  Los Angeles 
 
 
 
