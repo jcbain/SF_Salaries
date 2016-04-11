@@ -9,7 +9,12 @@ Our San Francisco dataset comes from Kaggle and you can find it [here](https://w
 Our group modified the original scripts, *[Explore SF Salary Data](https://www.kaggle.com/msjgriffiths/d/kaggle/sf-salaries/explore-sf-salary-data)* by [msjgriffiths](https://www.kaggle.com/msjgriffiths) and *[Data Exploration / Predicting Salaries](https://www.kaggle.com/mevanoff24/d/kaggle/sf-salaries/data-exploration-predicting-salaries/notebook)* by [CaliSwag18](https://www.kaggle.com/mevanoff24).
 
 ### Instructions on modified file execution
-Put `job_compare.ipynb` and `SF_LA_Salaries.csv` under the same path. Make sure the `Seaborn` library has been installed. Open the notebook and execute the code blocks. The detailed instructions of all steps are embedded in markdowns. 
+
+#### For salary and gender analysis
+Ensure that the `sample.csv` is in the `output\` subdirectory, as it contains the gender of the randomly sampled individuals. Run the `modified.Rmd` from the parent directory. You can skip down to the section at the bottom titled, `Inferring Gender`, which contains the entire analysis.
+
+#### For SF and LA comparisons
+Put `job_compare.ipynb` and `SF_LA_Salaries.csv` under the same path. Make sure the `Seaborn` library has been installed. Open the notebook and execute the code blocks. The detailed instructions of all steps are embedded in markdowns.
 
 ### Modified Analysis
 
