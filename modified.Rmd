@@ -27,11 +27,12 @@ library(readr)
 library(stringr)
 library(scales)
 library(mixtools)
+library(gender) # add package gender for gender prediction from first names
 ```
 
 # Data
 
-The files are in the `../input` subdirectory.
+The files are in the `../output` subdirectory.
 
 ```{r ListData}
 list.files("output/")
@@ -139,6 +140,7 @@ data <- data %>%
     select(-Notes, -Agency)
 ```
 
+
 ### Job Title
 
 I want to pay special attention to `JobTitle`. What information do we have?
@@ -173,6 +175,8 @@ data %>%
     filter(!duplicated(JobTitle)) %>%
     head()
 ```
+
+
 
 They look pretty senior. How does the pay compare to the people who share a title?
 
@@ -683,3 +687,79 @@ There are open challenges in:
 * Classifying the EmployeeName (didn't even touch that).
 * Classifying the FTE Status of people not in 2014.
 * Looking at Overtime / Other (also didn't touch)
+
+### Inferring Gender
+This first section is just some data carpentry in attempt to find the gender of individuals by their first name using the `gender` package.
+
+```{r}
+
+## create a firstname column in the data
+# data$fname<-sapply(strsplit(data$EmployeeName," "), "[[", 1)
+# data$fname<-tolower(data$fname)
+
+# worker function to create a vector of names with their identified gender
+# workerFunc <- function(n){
+  # return
+  # cbind(n, gender(as.character(n) , method = "ssa", years = c(1900, 1990))$gender)
+# }
+
+# sample 1500 rows
+# samp <- data[sample(nrow(data), 1500), ]
+
+# apply the worker function across the firstname column in the sampled data frame
+# results <- lapply(samp$fname, workerFunc)
+
+# index the results vector
+# indx <- sapply(results, length)
+
+## create a dataframe of the first names and gender
+# nm_gen<-as.data.frame(do.call(rbind,lapply(results, `length<-`, max(indx))))
+# names(nm_gen)<-c('name','gender')
+
+## append the gender column to the original sample data frame
+# samp$gender<-nm_gen$gender
+
+# write_csv(samp, "output/sample.csv")
+
+```
+
+
+
+```{r}
+samp<- read_csv("output/sample.csv")
+
+# how many males are there in this set
+length((samp[samp$gender=='male']))
+
+# and the number of females
+length((samp[samp$gender=='female']))
+
+# mean TotalPay for males and females
+mean_m<-mean(na.omit(samp$TotalPay[samp$gender=='male'])) 
+mean_f<-mean(na.omit(samp$TotalPay[samp$gender=='female'])) 
+
+# summary of TotalPay for males and females
+summary(na.omit(samp$TotalPay[samp$gender=='male'])) 
+summary(na.omit(samp$TotalPay[samp$gender=='female'])) 
+
+# difference between male and female pay in San Fran
+mean_m-mean_f
+```
+
+Well, it looks like males make about $21,000 more than females for this sample. Now, it would be nice to see what sectors males and females are taking up for their occupations and if the pay discrepancy still exists within job types. However, 1,500 rows might be too small to draw any meaningful conclusions. Perhaps when I have more time to run the `workerFunc()` across a larger subset of the data.
+
+Baby steps...Let's take a look at what the TotalPay distribution looks like for males and females.
+
+```{r}
+samp %>%
+  na.omit(samp$gender) %>%
+    ggplot(aes(x = TotalPay)) +
+    geom_vline(xintercept = mean_m, colour= "#00393b")+
+    geom_vline(xintercept = mean_f, colour="#870f06" )+
+    geom_density(aes(colour=gender, fill =gender, alpha=1)) +
+    scale_y_continuous()+
+    guides(alpha=FALSE)+ ggtitle("Pay for Males and Females")
+   
+```
+
+Ahh...So that gives a good representation of pay distribution between males and females. It appears that females are more frequently paid a lower salary than opposed to males. Okay, we could have gotten this information from the `summary()` ran above, but this puts a graph to the stats. It is also interesting to see that at around the $175,000 mark, male and female frequency appears to level out. A bit of a further analysis might need to be done in order to see what is going on between the lines, but for a fairly quick and dirty analysis, I think the results are rather interesting.
