@@ -29,6 +29,7 @@ Before we were able to create the plot that shows year vs. total pay, we tried h
 The original dataset only contains salaries in San Francisco. It would be interesting to see if there are any differences between major cities in California, such as San Francisco and Los Angeles. The original [data source](http://transparentcalifornia.com/agencies/salaries/) contains salaries data of all cities and counties in California. The data of Los Angeles in 2011, 2012, 2013, 2014 were downloaded and processed/merged using the code that has been used to generate the SF data by Kaggle. Then this LA salaries file and the original SF salaries file were combined into a master file called `SF_LA_Salaries.csv` manually. Then categorize jobs in `SF_LA_Salaries.csv` with function `find_job_title` in the original script.
 
 ### Plots
+![plot](https://github.com/jcbain/SF_Salaries/blob/readme_james/plots/pay_gender.png)
 
 This plot shows the trend of total pay of each gender from 2012 - 2014. Generally speaking, people would think that men would earn more money than women and the data before 2014 displays exactly this. However, in 2014, the pay of women is almost equal to pay of men.
 
