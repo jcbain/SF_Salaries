@@ -1,6 +1,6 @@
 # CS 4001/7001 Project 2 *San Francisco Salaries* Group
 
-#### By: Keevey Song, Peng Zhao, Rasha Gargees, Andrew Pistole & James Bain
+#### By: [Keevey Song](https://github.com/Keevey), [Peng Zhao](https://github.com/pengzhao001), [Rasha Gargees](https://github.com/rashasg), [Andrew Pistole](https://github.com/APistole) & [James Bain](https://github.com/jcbain)
 
 ### Dataset and Original Script
 
