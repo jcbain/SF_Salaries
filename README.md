@@ -31,11 +31,17 @@ The original dataset only contains salaries in San Francisco. It would be intere
 ### Plots
 
 The following plot depicts the sampled distribution of total pay for males and females. The mean for both genders are also displayed as vertical lines on the graph.
-![total_pay_gender](https://github.com/jcbain/SF_Salaries/blob/readme_james/plots/pay_gender.png)
+
+![total_pay_gender](https://github.com/jcbain/SF_Salaries/blob/master/plots/pay_gender.png)
+
 Notice where the frequencies of pay for males and females are concentrated. Males tend to be paid more.
 
 This plot shows the trend of total pay of each gender from 2012 - 2014. Generally speaking, people would think that men would earn more money than women and the data before 2014 displays exactly this. However, in 2014, the pay of women is almost equal to pay of men.
-![gender_year](https://github.com/jcbain/SF_Salaries/blob/readme_james/plots/gender_year.png)
 
-Then compare the count of each category of jobs in SF and LA by the `countplot` function in the `Seaborn` library. The following visualization shows the comparison. ![job_cat](https://github.com/jcbain/SF_Salaries/blob/readme_james/plots/job_cat_LA_SF.png)
+![gender_year](https://github.com/jcbain/SF_Salaries/blob/master/plots/gender_year.png)
+
+Then compare the count of each category of jobs in SF and LA by the `countplot` function in the `Seaborn` library. The following visualization shows the comparison.
+
+![job_cat](https://github.com/jcbain/SF_Salaries/blob/master/plots/job_cat_LA_SF.png)
+
  It's very interesting that the number of employees in police category in LA is almost 3 times that of SF. Does this mean LA is a more dangerous place to live compared to SF? According to [California Department of Justice's record in 2013](https://en.wikipedia.org/wiki/California_locations_by_crime_rate), the violent crime rates per 1,000 persons of LA and SF are 5.59 and 7.56 respectively, and the property crime rates per 1,000 persons of LA and SF are 15.90 and 13.96. They are pretty close. Then I realized that the population in LA is about 12 times larger than SF and things became reasonable. Many people work in transit field in SF and very few people in LA are in this field although LA has a much larger population. This is because SF has a much better public transportation system and people there almost do not need to drive. The public transportation system can create many positions in SF. Another interesting finding is there are much more people working in medical field in SF than LA given the fact that LA has a much larger population.
